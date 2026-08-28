@@ -1,0 +1,59 @@
+name: Sync file list from another repo
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时自动运行一次
+  workflow_dispatch:        # 也支持手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main page repo
+        uses: actions/checkout@v4
+
+      - name: Fetch file list from kuang-di-cheng-sheng
+        id: fetch
+        run: |
+          # 通过 GitHub API 获取仓库文件列表
+          FILES=$(curl -s https://api.github.com/repos/kongzi-lab/kuang-di-cheng-sheng/contents/ | \
+            python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for f in data:
+              if f['type'] == 'file' and f['name'] != 'README.md':
+                  print(f['name'])
+          ")
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate file list HTML
+        run: |
+          # 生成文件链接列表
+          echo '<ul class="repo-file-list">' > _file_list.html
+          while IFS= read -r file; do
+            if [ -n "$file" ]; then
+              # 对文件名进行 URL 编码
+              encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$file'))")
+              echo "  <li><a href=\"https://kongzi-lab.github.io/kuang-di-cheng-sheng/$encoded\">$file</a></li>" >> _file_list.html
+            fi
+          done <<< "${{ steps.fetch.outputs.files }}"
+          echo '</ul>' >> _file_list.html
+
+      - name: Update index.html
+        run: |
+          # 将生成的文件列表插入 index.html 中 <!-- FILE_LIST --> 标记处
+          if grep -q '<!-- FILE_LIST -->' index.html; then
+            sed -i '/<!-- FILE_LIST -->/r _file_list.html' index.html
+            sed -i '/<!-- FILE_LIST -->/d' index.html
+          fi
+          rm _file_list.html
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Auto-update file list from kuang-di-cheng-sheng"
+          git push
