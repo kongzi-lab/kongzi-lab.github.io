@@ -53,7 +53,7 @@ jobs:
               if name.lower() in SKIP_NAMES:
                   continue
               show.append(p)
-          show.sort()
+          show.sort(key=lambda p: (p.count("/"), p))
 
           lines = ['<ul class="repo-file-list">']
           for p in show:
