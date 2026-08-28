@@ -54,19 +54,19 @@ jobs:
                   continue
               show.append(p)
           
-                    SUBDIR_ORDER = {
-              "诗经专题": 0,
-              "孔子考证": 1,
-              "论语与经典传承": 2,
-              "扩展思考": 3,
+          SUBDIR_ORDER = {
+            "诗经专题": 0,
+            "孔子考证": 1,
+            "论语与经典传承": 2,
+            "扩展思考": 3,
           }
           def sort_key(p):
-              depth = p.count("/")
-              if depth == 0:
-                  return (0, "", p)
-              parts = p.split("/")
-              subdir = parts[0] if len(parts) > 1 else ""
-              return (1, SUBDIR_ORDER.get(subdir, 999), p)
+            depth = p.count("/")
+            if depth == 0:
+              return (0, "", p)
+            parts = p.split("/")
+            subdir = parts[0] if len(parts) > 1 else ""
+            return (1, SUBDIR_ORDER.get(subdir, 999), p)
           show.sort(key=sort_key)
 
           lines = ['<ul class="repo-file-list">']
